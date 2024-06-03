@@ -1,24 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-def init_db(): # Инициализация базы данных: создание таблицы, если она не существует.
-    conn = sqlite3.connect('habits.db') # Подключение к базе данных
-    cur = conn.cursor() # Создание курсора для выполнения SQL-запросов
-    cur.execute('''
-                CREATE TABLE IF NOT EXISTS habits (
-                habits_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name_habit TEXT NOT NULL,
-                habit_description TEXT,
-                name_targets TEXT,
-                habit_frequency TEXT,
-                status TEXT,
-                date_entry TEXT,
-                category TEXT,
-                user_id INTEGER
-            );''') # Создание таблицы habits с указанными полями, если она не существует
-    conn.commit() # Сохранение изменений
-    conn.close() # Закрытие соединения
-
+# Класс привычки
 class Habit:
     # Инициализатор класса Habit
     def __init__(self, habit_id, name_habit, habit_description, name_targets, habit_frequency, status, date_entry,
@@ -36,6 +19,8 @@ class Habit:
     # Статический метод для создания новой привычки в базе данных
     @staticmethod
     def create_habit(conn, name_habit, habit_description, name_targets, habit_frequency, category, user_id):
+        if conn is None:
+            raise ValueError("Connection object is None") # Проверка наличия соединения с базой данных
         date_entry = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # Получение текущей даты и времени
         status = "active" # Установка статуса привычки как "active"
         sql = '''INSERT INTO habits (name_habit, habit_description, name_targets, habit_frequency, status, date_entry, category, user_id)
@@ -54,7 +39,6 @@ class Habit:
         if name_habit:
             sql += ' name_habit = ?,'
             params.append(name_habit)
-
         if habit_description:
             sql += ' habit_description = ?,'
             params.append(habit_description)
@@ -110,32 +94,3 @@ class Habit:
         rows = cur.fetchall() # Получение всех строк результата запроса
         habits = [Habit(*row) for row in rows] # Создание списка объектов Habit из строк результата
         return habits # Возвращение списка привычек
-
-    # Тест:
-def main():
-    init_db() # Инициализация базы данных: создание таблицы, если она не существует.
-    with sqlite3.connect('habits.db') as conn:
-
-        # Создание привычки
-        habit_id = Habit.create_habit(conn, "Зарядка", "Ежедневная утренняя разминка", "Спорт", "Каждый день",
-                                      "Напоминать", 1)
-        print(f"Создание новой привычки с ID: {habit_id}")
-
-        # Получение привычки
-        habit = Habit.get_habit(conn, habit_id)
-        print(f"Получение только что созданной привычки по её ID: {habit.name_habit}")
-
-        # Редактирование привычки
-        Habit.edit_habit(conn, habit_id, status="Выполнено")
-        print(f"Обновление статуса привычки на 'Выполнено'")
-
-        # Список привычек
-        habits = Habit.list_habits(conn)
-        print(f"Получение списка всех привычек: {len(habits)}")
-
-        # Удаление привычки
-        Habit.delete_habit(conn, habit_id)
-        print(f"Удаление привычки по её ID: {habit_id}")
-
-if __name__ == "__main__":
-    main()
