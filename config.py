@@ -1,4 +1,4 @@
 # Telegram Bot API Token
-TOKEN = "your_token"
+TOKEN = "6882344636:AAEtVX-q9K3ncGwAU1YR4n_oMOfFWpdMxck"
 # OpenAI API Key
-api_key1="your_api_key",
+api_key1="sk-eojihWMYuwlwO4oNjNMX8DbkkkBtLg7I",
