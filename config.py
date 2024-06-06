@@ -49,27 +49,3 @@ def get_db_uri():
 if __name__ == "__main__":
     print("Telegram API Token:", Config.TELEGRAM_API_TOKEN)
     print("Database URI:", Config.get_db_uri())
-# -----------------------------------------------------------------
-#
-# Другой простой пример файла `config.py`, который содержит конфигурационные настройки
-# для вашего проекта "Трекер привычек".
-# Этот файл включает токен Telegram API и настройки базы данных
-
-# import os
-
-# class Config:
-# Токен Telegram API
-# TELEGRAM_API_TOKEN = os.getenv('TELEGRAM_API_TOKEN', 'your-telegram-api-token-here')
-
-# Настройки базы данных
-#    DB_NAME = os.getenv('DB_NAME', 'habit_tracker.db')
-#    DB_PATH = os.getenv('DB_PATH', './')
-
-#   @staticmethod
-#   def get_db_uri():
-#       return os.path.join(Config.DB_PATH, Config.DB_NAME)
-
-# Пример использования:
-# if __name__ == "__main__":
-#    print("Telegram API Token:", Config.TELEGRAM_API_TOKEN)
-#    print("Database URI:", Config.get_db_uri())
