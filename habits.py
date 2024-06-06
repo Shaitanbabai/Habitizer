@@ -13,8 +13,8 @@ class Habit:
         self.habit_description = habit_description
         self.habit_frequency = habit_frequency
         self.habit_status = habit_status
-        self.habit_start_date = habit_start_date
-        self.habit_end_date = habit_end_date
+        self.habit_start_date = datetime.strptime(habit_start_date, "%Y-%m-%d %H:%M:%S")
+        self.habit_end_date = datetime.strptime(habit_end_date, "%Y-%m-%d %H:%M:%S") if habit_end_date else None
 
 # Статический метод для создания новой привычки в базе данных
     @staticmethod
@@ -92,10 +92,13 @@ class Habit:
 
 # Статический метод для отправки напоминания о привычке в базу данных
     @staticmethod
-    def send_reminder(conn, habit_id):  # Отправка напоминания о привычке
-        print(f'Напоминание отправленно для привычки: {habit_id}')
-        next_reminder_time = datetime.now() + timedelta(minutes=1)  # Установка времени следующего напоминания через 1 минуту от текущего времени.
-        return next_reminder_time  # Возвращение времени следующего напоминания
+    def send_reminder(conn, habit_id):
+        print(f'Напоминание отправлено для привычки {habit_id}')
+        # Здесь можно добавить логику отправки уведомлений пользователю
+        sql = 'UPDATE habits SET last_reminder_time = ? WHERE habit_id = ?'
+        cur = conn.cursor()
+        cur.execute(sql, (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), habit_id))
+        conn.commit()
 
 # Статический метод для проверки статуса напоминания о привычке в базе данных
     @staticmethod
@@ -107,24 +110,34 @@ class Habit:
         if row: # Извлечение первой строки результата запроса.
             return row[0] == "1"  # Возврат значения True, если статус напоминания равен "1", иначе False.
         return False
+    
+# Метод рассчитывает время следующего напоминания на основе частоты привычки (habit_frequency) и даты начала (habit_start_date).
+    def calculate_next_reminder_time(habit):
+        current_time = datetime.now()
+        next_reminder_time = habit.habit_start_date
+        while next_reminder_time <= current_time:
+            next_reminder_time += timedelta(minutes=habit.habit_frequency)
+        return next_reminder_time
 
-# Метод для мониторинга привычек и отправки напоминаний в базу данных
+# Метод для мониторинга привычек и изменения статуса напоминания
     @staticmethod
     def monitor_habits():
-        while True:   # Бесконечный цикл для постоянного мониторинга привычек.
-            conn = sqlite3.connect('habits.db')  # Открытие соединения с базой данных
-            habits = Habit.list_habits(conn)  # Получение списка привычек из базы данных
-            for habit in habits:  # Перебор всех привычек в списке
-                next_reminder_time = Habit.send_reminder(conn, habit.habit_id)  # Отправка напоминания о привычке
-                conn.close()  # Закрываем соединение после отправки напоминания
+        while True:  #Метод `monitor_habits` выполняет мониторинг привычек в бесконечном цикле.
+            conn = sqlite3.connect('habits.db')
+            habits = Habit.list_habits(conn)
+            conn.close()
 
-                while datetime.now() < next_reminder_time:  # Ожидание до времени следующего напоминания.
-                    time.sleep(10)  # Сон на 10 секунд
+            for habit in habits:
+                next_reminder_time = Habit.calculate_next_reminder_time(habit)  # Вычисление следующего времени напоминания для привычки.
+                print(f'Следующее напоминание для привычки {habit.habit_id} в {next_reminder_time}')
 
-                conn = sqlite3.connect('habits.db')  # Повторное подключение к базе данных для проверки статуса напоминания.
-                if Habit.check_reminder_status(conn, habit.habit_id):
-                    print(f'Привычка {habit.habit_id} подтверждена.')
+                while datetime.now() < next_reminder_time - timedelta(minutes=1):  # Ждем 1 минуту до следующего напоминания.
+                    time.sleep(10)
+
+                conn = sqlite3.connect('habits.db')
+                if Habit.check_reminder_status(conn, habit.habit_id):  # Проверка статуса напоминания.
+                    Habit.send_reminder(conn, habit.habit_id)
                 else:
-                    print(f'Привычка {habit.habit_id} не подтверждена.')
-                    Habit.edit_habit(conn, habit.habit_id, habit_status="0")
-                conn.close()  # Закрываем соединение после проверки статуса
+                    print(f'Привычка {habit.habit_id} отключена')
+                    Habit.edit_habit(conn, habit.habit_id, habit_status="0")  # Изменение статуса привычки в базе данных.
+                conn.close()
