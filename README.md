@@ -19,13 +19,13 @@ config.py
 ```python
  pip install python-dotenv
 ```
- 3. Создайте файл `.env` в корневой директории вашего проекта:
+ 2. Создайте файл `.env` в корневой директории вашего проекта:
     
-``python
    TELEGRAM_API_TOKEN=your-telegram-api-token-here
    DB_NAME=habit_tracker.db
-   DB_PATH=./```
- 3. Обновите `config.py` для загрузки переменных окружения из файла `.env`:
+   DB_PATH=./
+
+3. Обновите `config.py` для загрузки переменных окружения из файла `.env`:
 
 ```python
 from dotenv import load_dotenv
