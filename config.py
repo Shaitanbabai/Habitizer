@@ -40,9 +40,9 @@ class Config:
     DB_PATH = os.getenv('DB_PATH', './')
 
 
-@staticmethod
-def get_db_uri():
-    return os.path.join(Config.DB_PATH, Config.DB_NAME)
+    @staticmethod
+    def get_db_uri():
+        return os.path.join(Config.DB_PATH, Config.DB_NAME)
 
 
 # Пример использования:
