@@ -1,11 +1,15 @@
 # В этом блоке происходит импорт необходимых для работы кода библиотек и модулей:
 # telebot: Библиотека для работы с Telegram Bot API.
 # types: Модуль из telebot для работы с клавиатурами и другими элементами интерфейса.
-# bot: Это модуль для работы с Telegram Bot API-позволяет создавать ботов, обрабатыватьи отправлять сообщения, работать с клавиатурами и 
+# bot: Это модуль для работы с Telegram Bot API-позволяет создавать ботов,
+# обрабатыватьи отправлять сообщения, работать с клавиатурами и 
 # другими функциями Telegram Bot API. Модуль bot можно установить с помощью pip install pytelegrambot
-# sqlite3: Библиотека для работы с базами данных SQLite. Подключение к базе данных habit_tracker.db, создание курсора для работы с ней.
+# sqlite3: Библиотека для работы с базами данных SQLite.
+# Подключение к базе данных habit_tracker.db, создание курсора для работы с ней.
 # datetime: Модуль для работы с датами и временем.
 # config: Модуль config.py, содержащий токен бота.
+
+
 import telebot
 from telebot import types
 import bot
@@ -16,7 +20,6 @@ from datetime import datetime, timedelta
 from timezone import get_timezone
 from db import cursor, db
 
-
 db = sqlite3.connect('habit_tracker.db')
 cursor = db.cursor()
 
@@ -25,60 +28,50 @@ cursor = db.cursor()
 # Обработчик команды /start
 @bot.message_handler(commands=['start'])
 def handle_start(message):
-# Получение ID пользователя
-user_id = message.chat.id
+    # Получение ID пользователя
+    user_id = message.chat.id
 
+ # Проверка наличия пользователя в базе данных
+ cursor.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
+ user_exists = cursor.fetchone() is not None
 
-# Проверка наличия пользователя в базе данных
-cursor.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
-user_exists = cursor.fetchone() is not None
+ if not user_exists:
+  # Создание нового пользователя в базе данных
+  cursor.execute('INSERT INTO users (user_id) VALUES (?)', (user_id,))
+  db.commit()
 
+  # Получение часового пояса пользователя
+  try:
+   timezone = get_timezone(message.chat.location.timezone)
+  except KeyError:
+   timezone = None
 
-if not user_exists:
-# Создание нового пользователя в базе данных
-cursor.execute('INSERT INTO users (user_id) VALUES (?)', (user_id,))
-db.commit()
+  # Сохранение часового пояса пользователя
+  cursor.execute('UPDATE users SET timezone = ? WHERE user_id = ?', (timezone, user_id))
+  db.commit()
 
+ # Получение информации о пользователе
+ cursor.execute('SELECT timezone FROM users WHERE user_id = ?', (user_id,))
+ user_timezone = cursor.fetchone()[0]
 
-# Получение часового пояса пользователя
-try:
-timezone = get_timezone(message.chat.location.timezone)
-except KeyError:
-timezone = None
+ # Текущее время в часовом поясе пользователя
+ current_time = datetime.now(timezone=get_timezone(user_timezone))
+ current_time_str = format_time(current_time, user_timezone)
 
+ # Приветственное сообщение
+ welcome_message = f"Приветствую в трекере привычек! \n\nТекущее время: {current_time_str} ({user_timezone})\n\nЧто хотите сделать?"
 
-# Сохранение часового пояса пользователя
-cursor.execute('UPDATE users SET timezone = ? WHERE user_id = ?', (timezone, user_id))
-db.commit()
+ # Создание клавиатуры
+ keyboard = create_keyboard_main_menu()
 
-
-# Получение информации о пользователе
-cursor.execute('SELECT timezone FROM users WHERE user_id = ?', (user_id,))
-user_timezone = cursor.fetchone()[0]
-
-
-# Текущее время в часовом поясе пользователя
-current_time = datetime.now(timezone=get_timezone(user_timezone))
-current_time_str = format_time(current_time, user_timezone)
-
-
-# Приветственное сообщение
-welcome_message = f"Приветствую в трекере привычек! \n\nТекущее время: {current_time_str} ({user_timezone})\n\nЧто хотите сделать?"
-
-
-# Создание клавиатуры
-keyboard = create_keyboard_main_menu()
-
-
-# Отправка приветствия и клавиатуры
-send_message_with_keyboard(bot, message.chat.id, welcome_message, keyboard)
+ # Отправка приветствия и клавиатуры
+ send_message_with_keyboard(bot, message.chat.id, welcome_message, keyboard)
 
 
 # Обработчик команды /help
 @bot.message_handler(commands=['help'])
 def handle_help(message):
-# Создание клавиатуры
-keyboard = create_keyboard_back_to_main_menu()
+    keyboard = create_keyboard_back_to_main_menu()
 
 # Текст справки
 help_text = """
@@ -92,86 +85,71 @@ help_text = """
 * /report - Получить отчет о привычке
 * /remove_habit - Удалить привычку
 * /help - Получить справку
-
-**Описание команд:**
-
-* ... (описание каждой команды)
-
-**Важно:**
-
-* ... (информация о базе данных)
-
-**Если у вас есть вопросы или предложения, 
-не стесняйтесь обращаться ко мне!**
- """
-
+"""
 
 # Отправка справки и клавиатуры
 send_message_with_keyboard(bot, message.chat.id, help_text, keyboard)
 
-
 # Обработчик команды /add_habit
 @bot.message_handler(commands=['add_habit'])
 def add_habit(message):
-# Получение ID пользователя
-user_id = message.chat.id
+  # Получение ID пользователя
+  user_id = message.chat.id
 
+  # Создание клавиатуры
+  keyboard = keyboard_add_habit_name
 
-# Создание клавиатуры
-keyboard = keyboard_add_habit_name
-
-
-# Запрос названия привычки
-send_message_with_keyboard(bot, message.chat.id, "Введите название новой привычки:", keyboard)
+  # Запрос названия привычки
+  send_message_with_keyboard(bot, message.chat.id, "Введите название новой привычки:", keyboard)
 
 
 # Обработчик команды /my_habits
 @bot.message_handler(commands=['my_habits'])
 def show_habits(message):
-# Получение ID пользователя
-user_id = message.chat.id
+  # Получение ID пользователя
+  user_id = message.chat.id
 
+  # Получение списка привычек пользователя
+  cursor.execute('SELECT habit_id, name FROM habits WHERE user_id = ?', (user_id,))
+  habits = cursor.fetchall()
 
-# Получение списка привычек пользователя
-cursor.execute('SELECT habit_id, name FROM habits WHERE user_id = ?', (user_id,))
-habits = cursor.fetchall()
-
-# Проверка наличия привычек
-if habits:
-# Создание клавиатуры
+  # Проверка наличия привычек
+  if habits:
+    # Создание клавиатуры
     keyboard = create_keyboard_from_habits(habits)
 
-# Сообщение о наличии привычек
-message_text = "Список ваших привычек:"
-    else:
-# Создание клавиатуры
+    # Сообщение о наличии привычек
+    message_text = "Список ваших привычек:"
+
+  else:
+    # Создание клавиатуры
     keyboard = keyboard_back_to_main_menu
 
-# Сообщение о отсутствии привычек
+    # Сообщение о отсутствии привычек
     message_text = "У вас пока нет привычек. Добавьте новую с помощью команды /add_habit."
 
-# Отправка сообщения и клавиатуры
-    send_message_with_keyboard(bot, message.chat.id, message_text, keyboard)
+  # Отправка сообщения и клавиатуры
+  send_message_with_keyboard(bot, message.chat.id, message_text, keyboard)
 
 
 # Обработчик команды /period
 @bot.message_handler(commands=['period'])
 def handle_period(message):
-# Получение ID пользователя
-    user_id = message.chat.id
+  # Получение ID пользователя
+  user_id = message.chat.id
 
-# Получение ID привычки из сообщения
-    habit_id = get_habit_id_from_message(message)
+  # Получение ID привычки из сообщения
+  habit_id = get_habit_id_from_message(message)
 
-# Проверка наличия привычки
+  # Проверка наличия привычки
   if habit_id is None:
     send_error_message(bot, message.chat.id, "Выберите привычку, для которой хотите изменить период напоминаний.")
     return
 
-# Создание клавиатуры
+  # Создание клавиатуры
   keyboard = create_keyboard_for_period_selection(habit_id)
 
-# Запрос периода напоминаний
+  # Запрос периода напоминаний
   send_message_with_keyboard(bot, message.chat.id, "Выберите желаемый период напоминаний:", keyboard)
 
 
@@ -179,45 +157,45 @@ def handle_period(message):
 @bot.message_handler(commands=['frequency'])
 def handle_frequency(message):
   # Получение ID пользователя
-    user_id = message.chat.id
+  user_id = message.chat.id
 
-# Получение ID привычки из сообщения
-    habit_id = get_habit_id_from_message(message)
+  # Получение ID привычки из сообщения
+  habit_id = get_habit_id_from_message(message)
 
-# Проверка наличия привычки
+  # Проверка наличия привычки
   if habit_id is None:
     send_error_message(bot, message.chat.id, "Выберите привычку, для которой хотите изменить частоту напоминаний.")
-return
+    return
 
-# Создание клавиатуры
+  # Создание клавиатуры
   keyboard = create_keyboard_for_frequency_selection(habit_id)
 
-# Запрос частоты напоминаний
+  # Запрос частоты напоминаний
   send_message_with_keyboard(bot, message.chat.id, "Выберите желаемую частоту напоминаний:", keyboard)
 
 
 # Обработчик команды /report
 @bot.message_handler(commands=['report'])
 def handle_report(message):
-# Получение ID пользователя
+  # Получение ID пользователя
   user_id = message.chat.id
 
-# Получение ID привычки из сообщения
+  # Получение ID привычки из сообщения
   habit_id = get_habit_id_from_message(message)
 
-# Проверка наличия привычки
-if habit_id is None:
-  send_error_message(bot, message.chat.id, "Выберите привычку, для которой хотите получить отчет.")
-return
+  # Проверка наличия привычки
+  if habit_id is None:
+    send_error_message(bot, message.chat.id, "Выберите привычку, для которой хотите получить отчет.")
+    return
 
-# Получение информации о привычке
+  # Получение информации о привычке
   habit_info = get_habit_info(habit_id)
 
-# Формирование отчета
-report_text = generate_report_text(habit_info)
+  # Формирование отчета
+  report_text = generate_report_text(habit_info)
 
-# Отправка отчета
-send_message(bot, message.chat.id, report_text)
+  # Отправка отчета
+  send_message(bot, message.chat.id, report_text)
 
 
 # Обработчик команды /remove_habit
@@ -446,29 +424,29 @@ def create_keyboard_from_habits(habits):
 
 # Функция для создания клавиатуры для выбора периода
 def create_keyboard_for_period_selection(habit_id):
-  keyboard = []
-  for period in ["Ежедневно", "Раз в неделю", "Раз в месяц"]:
-    keyboard_row = [types.KeyboardButton(f"{period}_{habit_id}")]
-    keyboard.append(keyboard_row)
-  keyboard.append(["Назад"])
-  return keyboard
+    keyboard = []
+    for period in ["Ежедневно", "Раз в неделю", "Раз в месяц"]:
+        keyboard_row = [types.KeyboardButton(f"{period}_{habit_id}")]
+        keyboard.append(keyboard_row)
+        keyboard.append(["Назад"])
+        return keyboard
 
 
 # Функция для создания клавиатуры для выбора частоты
 def create_keyboard_for_frequency_selection(habit_id):
-  keyboard = []
-  for frequency in ["Утром", "Днем", "Вечером"]:
-    keyboard_row = [types.KeyboardButton(f"{frequency}_{habit_id}")]
-    keyboard.append(keyboard_row)
-  keyboard.append(["Назад"])
-  return keyboard
+    keyboard = []
+    for frequency in ["Утром", "Днем", "Вечером"]:
+        keyboard_row = [types.KeyboardButton(f"{frequency}_{habit_id}")]
+        keyboard.append(keyboard_row)
+        keyboard.append(["Назад"])
+        return keyboard
 
 
 # Функция для получения названия привычки из сообщения
 def get_habit_name(habit_id):
-  cursor.execute('SELECT name FROM habits WHERE habit_id = ?', (habit_id,))
-  habit_name = cursor.fetchone()[0]
-  return habit_name
+    cursor.execute('SELECT name FROM habits WHERE habit_id = ?', (habit_id,))
+    habit_name = cursor.fetchone()[0]
+    return habit_name
 
 
 # Запуск бота
