@@ -7,22 +7,23 @@ from sqlite3 import Error
 from datetime import datetime as dt, datetime
 
 
+def create_connection(db_file):
+    """Создание подключения к SQLite базе данных."""
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+        print(f"Соединение с базой данных {db_file} установлено.")
+    except Error as e:
+        print(f"Ошибка соединения с базой данных: {e}")
+    return conn
+
+
 class HabitTrackerDatabase:
     def __init__(self, db_file):
         """Инициализация соединения с базой данных."""
         self.db_file = "habit_tracker.db"
-        self.connection = self.create_connection(db_file)
+        self.connection = create_connection(db_file)
         self.create_tables()
-
-    def create_connection(self, db_file):
-        """Создание подключения к SQLite базе данных."""
-        conn = None
-        try:
-            conn = sqlite3.connect(db_file)
-            print(f"Соединение с базой данных {db_file} установлено.")
-        except Error as e:
-            print(f"Ошибка соединения с базой данных: {e}")
-        return conn
 
     def create_tables(self):
         """Создание таблиц в базе данных."""
@@ -111,6 +112,12 @@ class HabitTrackerDatabase:
             print(f"Ошибка выполнения запроса: {e}")
             return None
 
+    def close_connection(self):
+        """Закрытие соединения с базой данных."""
+        if self.connection:
+            self.connection.close()
+            print("Соединение с базой данных закрыто.")
+
     def add_user(self, user_tg_id, user_name):
         """Добавление нового пользователя."""
         # Проверка, существует ли пользователь с данным user_tg_id в таблице users
@@ -137,7 +144,7 @@ class HabitTrackerDatabase:
         """Добавление новой привычки с проверкой на дублирование."""
         # Проверка на дублирование привычки
         if self.is_habit_duplicate(user_id, habit_name):
-            print("Привычка с таким именем уже существует.")  # Вывод предупреждения пользователю
+            # print("Привычка с таким именем уже существует.")  # Вывод предупреждения пользователю
             return False
 
         query = """
@@ -187,20 +194,160 @@ class HabitTrackerDatabase:
         habit_id = result[0][0]
         return habit_id
 
+    def send_reminder_and_log_statistics(self, user_id, habit_id, reminder_id):
+        """Отправка напоминания пользователю и запись события в таблицу statistics, обновление reminder_status."""
+        habit_query = """
+        SELECT habit_name, habit_description FROM habits WHERE habit_id = ?
+        """
+        habit_result = self.execute_query(habit_query, (habit_id,), fetch=True)
+
+        if not habit_result:
+            print("Привычка не найдена.")
+            return
+
+        habit_name, habit_description = habit_result[0]
+
+        reminder_query = """
+        SELECT reminder_date FROM reminders WHERE reminder_id = ?
+        """
+        reminder_result = self.execute_query(reminder_query, (reminder_id,), fetch=True)
+
+        if not reminder_result:
+            print("Напоминание не найдено.")
+            return
+
+        reminder_date = reminder_result[0][0]
+        reminder_sending_date = dt.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        print(
+            f"Напоминание отправлено пользователю {user_id} для привычки '{habit_name}' ({habit_description}) на {reminder_date} в {reminder_sending_date}")
+
+        # Обновление поля reminder_status в таблице reminders
+        update_reminder_query = """
+        UPDATE reminders SET reminder_status = 0 WHERE reminder_id = ?
+        """
+        self.execute_query(update_reminder_query, (reminder_id,))
+
+        # Запись события в таблицу statistics
+        query = """
+        INSERT INTO statistics (
+            user_id, habit_id, reminder_id, habit_status, reminder_status, 
+            reminder_status_name, reminder_sending_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
+        self.execute_query(query, (
+            user_id, habit_id, reminder_id, 0, 2, 'Активное', reminder_sending_date
+        ))
+
+    def get_user_habits(self, user_id):
+        """Получение всех привычек пользователя."""
+        query = """
+        SELECT habit_id, habit_name FROM habits WHERE user_id = ?
+        """
+        return self.execute_query(query, (user_id,), fetch=True)
+
+    def get_habit_reminders(self, habit_id):
+        """Получение всех напоминаний для привычки."""
+        query = """
+        SELECT reminder_id, reminder_date FROM reminders WHERE habit_id = ?
+        """
+        return self.execute_query(query, (habit_id,), fetch=True)
+
+    def send_reminders_based_on_time(self, user_id, current_time):
+        """Отправка напоминаний пользователю на основе текущего времени."""
+        habits = self.get_user_habits(user_id)
+        if not habits:
+            print("Нет привычек для данного пользователя.")
+            return
+
+        for habit in habits:
+            habit_id, habit_name = habit
+            reminders = self.get_habit_reminders(habit_id)
+            for reminder in reminders:
+                reminder_id, reminder_date = reminder
+                reminder_time = datetime.strptime(reminder_date, "%H:%M").time()
+                if reminder_time == current_time.time():
+                    self.send_reminder_and_log_statistics(user_id, habit_id, reminder_id)
+
+    def record_habit_response(self, user_id, habit_id, reminder_id, response_time):
+        """Запись отклика пользователя на напоминание."""
+
+        # Получение времени окончания напоминаний для данной привычки
+        habit_query = "SELECT reminder_time_till FROM habits WHERE habit_id = ?"
+        habit_result = self.execute_query(habit_query, (habit_id,), fetch=True)
+
+        if not habit_result:
+            print("Привычка не найдена.")
+            return
+
+        # Получение времени напоминания
+        reminder_query = "SELECT reminder_date FROM reminders WHERE reminder_id = ?"
+        reminder_result = self.execute_query(reminder_query, (reminder_id,), fetch=True)
+
+        if not reminder_result:
+            print("Напоминание не найдено.")
+            return
+
+        reminder_time_till = habit_result[0][0]  # Время окончания напоминаний
+        reminder_date = reminder_result[0][0]  # Время напоминания
+
+        # Попытка преобразования строкового времени отклика в объект datetime
+        try:
+            response_time_dt = datetime.strptime(response_time, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            try:
+                response_time_dt = datetime.strptime(response_time, "%H:%M")
+                # Если формат без даты, добавляем текущую дату
+                response_time_dt = datetime.combine(datetime.now().date(), response_time_dt.time())
+                print(response_time)
+            except ValueError:
+                print("Неверный формат времени отклика.")
+                return
+
+        # Преобразование строкового времени напоминания в объект datetime
+        reminder_date_dt = datetime.strptime(reminder_date, "%H:%M")
+        # Преобразование времени окончания напоминаний в объект time и комбинирование с датой напоминания
+        reminder_time_till_dt = datetime.strptime(reminder_time_till, "%H:%M").time()
+        reminder_time_till_dt = datetime.combine(reminder_date_dt.date(), reminder_time_till_dt)
+
+        # Проверка времени отклика относительно времени напоминания и времени окончания напоминаний
+        if response_time_dt > reminder_date_dt and response_time_dt > reminder_time_till_dt:
+            # Если отклик получен позже, обновляем статус напоминания на 'не выполнено' (0)
+            update_reminder_query = "UPDATE reminders SET reminder_status = 0 WHERE reminder_id = ?"
+            self.execute_query(update_reminder_query, (reminder_id,))
+
+            # Обновляем запись в таблице статистики, устанавливая статус 'не выполнено' (0) и добавляя время отклика
+            update_statistics_query = """
+            UPDATE statistics
+            SET reminder_status = 0, reminder_status_name = 'НеВыполнено', reminder_receive_response_date = ?
+            WHERE reminder_id = ?
+            """
+            self.execute_query(update_statistics_query, (response_time, reminder_id))
+
+            # Выводим сообщение о том, что время для отклика вышло
+            print("Время для отклика на напоминание вышло")
+        else:
+            # Если отклик получен вовремя, обновляем статус напоминания на 'выполнено' (1)
+            update_reminder_query = "UPDATE reminders SET reminder_status = 1 WHERE reminder_id = ?"
+            self.execute_query(update_reminder_query, (reminder_id,))
+
+            # Обновляем запись в таблице статистики, устанавливая статус 'выполнено' (1) и добавляя время отклика
+            update_statistics_query = """
+            UPDATE statistics
+            SET reminder_status = 1, reminder_status_name = 'Выполнено', reminder_receive_response_date = ?
+            WHERE reminder_id = ?
+            """
+            self.execute_query(update_statistics_query, (response_time, reminder_id))
+
+            # Выводим сообщение о том, что привычка выполнена
+            print("Привычка выполнена")
+
     # def changing_convenient_reminder_time(self, reminder_time_from, reminder_time_till, habit_id):
     #     """Изменение удобного времени оповещения."""
     #     query = """
     #     UPDATE habits SET habits.reminder_time_from=?, habits.reminder_time_till=? WHERE user_id=?
     #     """
     #     self.execute_query(query, (reminder_time_from, reminder_time_till, habit_id))
-
-    # def add_reminder(self, user_id, habit_id, reminder_date, reminder_status):
-    #     """Добавление напоминаний о привычке"""
-    #     query = """
-    #     INSERT INTO reminders (user_id, habit_id, reminder_date, reminder_status)
-    #     VALUES (?, ?, ?, ?)
-    #     """
-    #     self.execute_query(query, (user_id, habit_id, reminder_date, reminder_status))
 
     # def mark_habit_rejection(self, habit_id):
     #     """Отметка временного отказа от привычки - на перспективу"""
@@ -234,23 +381,8 @@ class HabitTrackerDatabase:
     #      """
     #     self.execute_query(query, habit_id)
 
-    # def get_habits(self, user_id):
-    #     """Получение всех привычек пользователя."""
-    #     query = """
-    #     SELECT * FROM habits WHERE user_id = ?
-    #     """
-    #     cursor = self.connection.cursor()
-    #     cursor.execute(query, (user_id,))
-    #     return cursor.fetchall()
-
-    def close_connection(self):
-        """Закрытие соединения с базой данных."""
-        if self.connection:
-            self.connection.close()
-            print("Соединение с базой данных закрыто.")
-
     # def execute_missed(self, query, params='missed_number_reminders_habit', fetch=False):
-    #     """Выполнение SQL-запроса."""
+    #     """Выполнение SQL-запроса. Юрий"""
     #     try:
     #         cursor = self.connection.cursor()
     #         query = "SELECT COUNT(missed_number_reminders_habit) FROM statistics"
@@ -267,15 +399,3 @@ class HabitTrackerDatabase:
     #         print(f"Ошибка выполнения запроса: {e}")
     #         return None
     #
-
-# # # Пример использования
-# if __name__ == "__main__":
-#     db = HabitTrackerDatabase("habit_tracker.db")
-# #     db.add_user(1101, "username")
-# #     db.add_habit(1, "Exercise", "Daily morning exercise", "30 minutes", "daily")
-# #     db.mark_habit_done(1, 1, "2023-10-01")
-# #     habits = db.get_habits(1)
-# # #    progress = db.get_progress(1, 1)
-# #     print("Habits:", habits)
-# # #    print("Progress:", progress)
-#     db.close_connection()
