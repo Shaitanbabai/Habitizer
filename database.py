@@ -134,21 +134,36 @@ class HabitTrackerDatabase:
 
     def add_habit(self, user_id, habit_name, habit_description, habit_frequency, reminder_time_from,
                   reminder_time_till):
-        """Добавление новой привычки."""
+        """Добавление новой привычки с проверкой на дублирование."""
+        # Проверка на дублирование привычки
+        if self.is_habit_duplicate(user_id, habit_name):
+            print("Привычка с таким именем уже существует.")  # Вывод предупреждения пользователю
+            return False
+
         query = """
-         INSERT INTO habits (user_id, habit_name, habit_description, habit_frequency, habit_start_date, reminder_time_from, reminder_time_till)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
-         """
+        INSERT INTO habits (user_id, habit_name, habit_description, habit_frequency, habit_start_date, reminder_time_from, reminder_time_till)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
         habit_start_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.execute_query(query, (
-        user_id, habit_name, habit_description, habit_frequency, habit_start_date, reminder_time_from,
-        reminder_time_till))
+            user_id, habit_name, habit_description, habit_frequency, habit_start_date, reminder_time_from,
+            reminder_time_till))
+
         habit_id = self.get_habit_id(user_id, habit_name)
         self.add_reminder_habit(user_id, habit_id, habit_frequency, reminder_time_from, reminder_time_till)
+        return True
+
+    def is_habit_duplicate(self, user_id, habit_name):
+        """Проверка на дублирование привычки."""
+        query = """
+        SELECT COUNT(*) FROM habits WHERE user_id=? AND habit_name=?
+        """
+        result = self.execute_query(query, (user_id, habit_name), fetch=True)
+        count = result[0][0]
+        return count > 0
 
     def add_reminder_habit(self, user_id, habit_id, habit_frequency, reminder_time_from, reminder_time_till):
-        """Добавление напоминаний дл
- я привычки с частотой N раз."""
+        """Добавление напоминаний для привычки с частотой N раз."""
         time_from = datetime.strptime(reminder_time_from, "%H:%M")
         time_till = datetime.strptime(reminder_time_till, "%H:%M")
         delta = time_till - time_from
