@@ -15,7 +15,7 @@ from telebot import types
 import bot
 import sqlite3
 import datetime
-from config import bot
+from config import Config
 from datetime import datetime, timedelta
 from timezone import get_timezone
 from db import cursor, db
@@ -31,12 +31,13 @@ def handle_start(message):
     # Получение ID пользователя
     user_id = message.chat.id
 
- # Проверка наличия пользователя в базе данных
- cursor.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
- user_exists = cursor.fetchone() is not None
 
- if not user_exists:
-  # Создание нового пользователя в базе данных
+# Проверка наличия пользователя в базе данных
+cursor.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
+user_exists = cursor.fetchone() is not None
+
+# Создание нового пользователя в базе данных
+if not user_exists:
   cursor.execute('INSERT INTO users (user_id) VALUES (?)', (user_id,))
   db.commit()
 
@@ -50,22 +51,22 @@ def handle_start(message):
   cursor.execute('UPDATE users SET timezone = ? WHERE user_id = ?', (timezone, user_id))
   db.commit()
 
- # Получение информации о пользователе
- cursor.execute('SELECT timezone FROM users WHERE user_id = ?', (user_id,))
- user_timezone = cursor.fetchone()[0]
+# Получение информации о пользователе
+cursor.execute('SELECT timezone FROM users WHERE user_id = ?', (user_id,))
+user_timezone = cursor.fetchone()[0]
 
- # Текущее время в часовом поясе пользователя
- current_time = datetime.now(timezone=get_timezone(user_timezone))
- current_time_str = format_time(current_time, user_timezone)
+# Текущее время в часовом поясе пользователя
+current_time = datetime.now(timezone=get_timezone(user_timezone))
+current_time_str = format_time(current_time, user_timezone)
 
- # Приветственное сообщение
- welcome_message = f"Приветствую в трекере привычек! \n\nТекущее время: {current_time_str} ({user_timezone})\n\nЧто хотите сделать?"
+# Приветственное сообщение
+welcome_message = f"Приветствую в трекере привычек! \n\nТекущее время: {current_time_str} ({user_timezone})\n\nЧто хотите сделать?"
 
- # Создание клавиатуры
- keyboard = create_keyboard_main_menu()
+# Создание клавиатуры
+keyboard = create_keyboard_main_menu()
 
- # Отправка приветствия и клавиатуры
- send_message_with_keyboard(bot, message.chat.id, welcome_message, keyboard)
+# Отправка приветствия и клавиатуры
+send_message_with_keyboard(bot, message.chat.id, welcome_message, keyboard)
 
 
 # Обработчик команды /help
