@@ -1,3 +1,6 @@
+from database import *
+from habits import *
+from users import *
 import telebot
 # import requests
 # from openai import OpenAI
