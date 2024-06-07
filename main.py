@@ -11,8 +11,8 @@ import telebot
 
 
 # Инициализация бота
-from config import TOKEN
-bot = telebot.TeleBot(TOKEN)
+from config import Config
+bot = telebot.TeleBot(Config.TELEGRAM_API_TOKEN)
 message_count = 0
 
 # def chat_with_ai(initial_message):
