@@ -1,8 +1,7 @@
-import requests
 import telebot
-
+# import requests
 # from openai import OpenAI
-from config import api_key1
+# from config import api_key1
 # # Настройка клиента API OpenAI (убедитесь, что используете корректный метод для вашего случая)
 # client = OpenAI(
 #     api_key=api_key1,
@@ -31,21 +30,21 @@ message_count = 0
 #   return reply
 
 
-
-
 # Обработчик команды start
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
   bot.reply_to(
       message,
-      "Привет! Я бот -трекер привычек (вер 1.0). Мне можно задать свои привычки , задать им напоминания , я буду тебе помогать.\nНапиши /help для просмотра команд"
+      "Привет! Я бот -трекер привычек (вер 1.0). Мне можно задать свои привычки , задать им напоминания , я буду тебе "
+      "помогать.\nНапиши /help для просмотра команд"
   )
 
 
 # Обработчик команды help
 @bot.message_handler(commands=['help'])
 def send_help(message):
-  help_text = "Доступные команды:\n/start - начало работы\n/help - помощь\n/habit - создать привычку \n/change - изменить привычку \n/delete - удалить привычку \n/statistics - статистика "
+  help_text = ("Доступные команды:\n/start - начало работы\n/help - помощь\n/habit - создать привычку \n/change - "
+               "изменить привычку \n/delete - удалить привычку \n/statistics - статистика")
   bot.reply_to(message, help_text)
 
 
@@ -58,9 +57,11 @@ def send_count(message):
 def change_habit(message):
     bot.reply_to(message, f"Функционал в разработке. Приятно познакомиться, {message.from_user.first_name}!")
 
+
 @bot.message_handler(commands=['delete'])
 def delete_habit(message):
     bot.reply_to(message, f"Функционал в разработке. Приятно познакомиться, {message.from_user.first_name}!")
+
 
 @bot.message_handler(commands=['statistics'])
 def statistics(message):
