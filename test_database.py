@@ -1,7 +1,5 @@
 
-from datetime import datetime
 from database import HabitTrackerDatabase
-import sqlite3
 
 
 if __name__ == "__main__":
@@ -54,10 +52,10 @@ if __name__ == "__main__":
     # user_id = 4
     # db.send_reminders_based_on_time(user_id, current_time)
 
-    user_id = 1
-    habit_id = 1
-    reminder_id = 1
-    response_time = "07:10"
-    db.record_habit_response(user_id, habit_id, reminder_id, response_time)
+    reminder_id = 26
+    user_id = 3
+    habit_id = 9
+    response_time = "2024-06-07 15:02:00"
+    db.add_user_response(user_id, habit_id, reminder_id, response_time)
 
     db.close_connection()
