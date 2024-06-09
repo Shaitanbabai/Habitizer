@@ -1,4 +1,9 @@
 import telebot
+import sqlite3
+from config import Config
+from habits import Habit  # Импортируем класс Habit из habits.py
+from database import HabitTrackerDatabase
+
 # import requests
 # from openai import OpenAI
 # from config import api_key1
@@ -11,9 +16,16 @@ import telebot
 
 
 # Инициализация бота
-from config import Config
 bot = telebot.TeleBot(Config.TELEGRAM_API_TOKEN)
 message_count = 0
+
+# Инициализация базы данных
+db = HabitTrackerDatabase("habit_tracker.db")
+
+# Подключение к базе данных
+def get_db_connection():
+    conn = sqlite3.connect('habits.db')
+    return conn
 
 # def chat_with_ai(initial_message):
 #   """
@@ -47,11 +59,43 @@ def send_help(message):
                "изменить привычку \n/delete - удалить привычку \n/statistics - статистика")
   bot.reply_to(message, help_text)
 
+# Обработчик команды habit
+# @bot.message_handler(commands=['habit'])
+# def send_count(message):
+#   bot.reply_to(message, f"Функционал в разработке. Приятно познакомиться, {message.from_user.first_name}!")
 
+# Обработчик команды habit
 @bot.message_handler(commands=['habit'])
-def send_count(message):
-  bot.reply_to(message, f"Функционал в разработке. Приятно познакомиться, {message.from_user.first_name}!")
+def create_habit(message):
+    try:
+        # Разделяем сообщение на части
+        parts = message.text.split(',')[1:]
+        if len(parts) < 3:
+            bot.reply_to(message, "Пожалуйста, введите все параметры привычки: /habit <название>, <описание>, <частота>")
+            return
 
+        habit_name = parts[0].strip()
+        habit_description = parts[1].strip()
+        habit_frequency = parts[2].strip()
+
+        conn = get_db_connection()
+        habit_id = Habit.create_habit(conn, message.from_user.id, habit_name, habit_description, habit_frequency)
+        conn.close()
+
+        bot.reply_to(message, f"Привычка '{habit_name}' была успешно создана с ID {habit_id}.")
+    except Exception as e:
+        bot.reply_to(message, f"Произошла ошибка при создании привычки: {str(e)}")
+
+# Обработчик команды habit
+# @bot.message_handler(commands=['habit'])
+# def create_habit(message):
+#     user_id = message.from_user.id
+#     habit_name = "Название привычки"  # Замените на реальное имя привычки
+#     habit_description = "Описание привычки"  # Замените на реальное описание привычки
+#     habit_frequency = "ежедневно"  # Замените на реальную частоту
+#
+#     habit_id = Habit.create_habit(db.connection, user_id, habit_name, habit_description, habit_frequency)
+#     bot.reply_to(message, f"Привычка '{habit_name}' создана с ID {habit_id}")
 
 @bot.message_handler(commands=['change'])
 def change_habit(message):
