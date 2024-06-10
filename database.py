@@ -18,7 +18,6 @@ def create_connection(db_file):
     return conn
 
 
-
 class HabitTrackerDatabase:
     def __init__(self, db_file):
         """Инициализация соединения с базой данных."""
@@ -141,7 +140,7 @@ class HabitTrackerDatabase:
             self.execute_query(query_insert, (user_tg_id, user_name, dt.now().strftime("%Y-%m-%d %H:%M:%S")))
 
     def get_user_name_by_user_tg_id(self, user_tg_id):
-        """Получение id привычки."""
+        """Получение имени зарегистрированного пользователя по его id в Телеграм."""
         query = """
         SELECT user_name FROM users WHERE user_tg_id=?
         """
@@ -149,11 +148,20 @@ class HabitTrackerDatabase:
         user_name = result[0][0]
         return user_name
 
+    def get_user_id_by_user_tg_id(self, user_tg_id):
+        """Получение имени зарегистрированного пользователя по его id в Телеграм."""
+        query = """
+        SELECT user_id FROM users WHERE user_tg_id=?
+        """
+        result = self.execute_query(query, (user_tg_id,), fetch=True)
+        user_id = result[0][0]
+        return user_id
+
     def add_habit(self, user_id, habit_name, habit_description, habit_frequency, reminder_time_from,
                   reminder_time_till):
         """Добавление новой привычки с проверкой на дублирование."""
         # Проверка на дублирование привычки
-        if self.is_habit_duplicate(user_id, habit_name):
+        if self.is_habit_duplicate(user_id, habit_name, habit_description):
             # print("Привычка с таким именем уже существует.")  # Вывод предупреждения пользователю
             return False
 
@@ -166,16 +174,16 @@ class HabitTrackerDatabase:
             user_id, habit_name, habit_description, habit_frequency, habit_start_date, reminder_time_from,
             reminder_time_till))
 
-        habit_id = self.get_habit_id(user_id, habit_name)
+        habit_id = self.get_habit_id(user_id, habit_name, habit_description)
         self.add_reminder_habit(user_id, habit_id, habit_frequency, reminder_time_from, reminder_time_till)
         return True
 
-    def is_habit_duplicate(self, user_id, habit_name):
+    def is_habit_duplicate(self, user_id, habit_name, habit_description):
         """Проверка на дублирование привычки."""
         query = """
-        SELECT COUNT(*) FROM habits WHERE user_id=? AND habit_name=?
+        SELECT COUNT(*) FROM habits WHERE user_id=? AND habit_name=? AND habit_description=?
         """
-        result = self.execute_query(query, (user_id, habit_name), fetch=True)
+        result = self.execute_query(query, (user_id, habit_name, habit_description), fetch=True)
         count = result[0][0]
         return count > 0
 
@@ -195,12 +203,12 @@ class HabitTrackerDatabase:
             self.execute_query(query, (user_id, habit_id, reminder_time_str))
             reminder_date += interval
 
-    def get_habit_id(self, user_id, habit_name):
+    def get_habit_id(self, user_id, habit_name, habit_description):
         """Получение id привычки."""
         query = """
-        SELECT habit_id FROM habits WHERE user_id=? AND habit_name=?
+        SELECT habit_id FROM habits WHERE user_id=? AND habit_name=? AND habit_description=?
         """
-        result = self.execute_query(query, (user_id, habit_name), fetch=True)
+        result = self.execute_query(query, (user_id, habit_name, habit_description), fetch=True)
         habit_id = result[0][0]
         return habit_id
 

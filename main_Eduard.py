@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import telebot
 from telebot import types
 from database import HabitTrackerDatabase
@@ -44,6 +46,7 @@ def send_welcome(message):
     # Проверяем, есть ли пользователь в базе данных
     query_check = "SELECT COUNT(*) FROM users WHERE user_tg_id = ?"
     result = db.execute_query(query_check, (user_tg_id,), fetch=True)
+    db.close_connection()
     # print(result)
 
     if result and result[0][0] > 0:
@@ -75,7 +78,66 @@ def send_help(message):
 
 @bot.message_handler(commands=['habit'])
 def send_count(message):
-    bot.reply_to(message, f"Функционал в разработке. Приятно познакомиться, {message.from_user.first_name}!")
+    user_tg_id = message.from_user.id
+    user_id = db.get_user_id_by_user_tg_id(user_tg_id)
+
+    msg = bot.reply_to(message, "Введите название привычки (например: Правильное питание):")
+    bot.register_next_step_handler(msg, get_habit_name, user_id)
+
+
+def get_habit_name(message, user_id):
+    habit_name = message.text
+    msg = bot.reply_to(message, "Введите описание привычки (например: Есть овощи 3 раза в день):")
+    bot.register_next_step_handler(msg, get_habit_description, user_id, habit_name)
+
+
+def get_habit_description(message, user_id, habit_name):
+    habit_description = message.text
+    msg = bot.reply_to(message, "Введите частоту повторения привычки (например: 3 раза в день). Вводите только число:")
+    bot.register_next_step_handler(msg, get_habit_frequency, user_id, habit_name, habit_description)
+
+
+def get_habit_frequency(message, user_id, habit_name, habit_description):
+    try:
+        habit_frequency = int(message.text)
+        if habit_frequency <= 0:
+            raise ValueError
+    except ValueError:
+        msg = bot.reply_to(message, "Частота повторения должна быть целым положительным числом. Пожалуйста, попробуйте снова:")
+        bot.register_next_step_handler(msg, get_habit_frequency, user_id, habit_name, habit_description)
+        return
+
+    msg = bot.reply_to(message, "Введите время начала оповещения (например: 07:00):")
+    bot.register_next_step_handler(msg, get_reminder_time_from, user_id, habit_name, habit_description, habit_frequency)
+
+
+def get_reminder_time_from(message, user_id, habit_name, habit_description, habit_frequency):
+    reminder_time_from = message.text
+    try:
+        datetime.strptime(reminder_time_from, "%H:%M")
+    except ValueError:
+        msg = bot.reply_to(message, "Время начала оповещения должно быть в формате ЧЧ:ММ. Пожалуйста, попробуйте снова:")
+        bot.register_next_step_handler(msg, get_reminder_time_from, user_id, habit_name, habit_description, habit_frequency)
+        return
+
+    msg = bot.reply_to(message, "Введите время окончания оповещения (например: 19:00):")
+    bot.register_next_step_handler(msg, get_reminder_time_till, user_id, habit_name, habit_description, habit_frequency, reminder_time_from)
+
+
+def get_reminder_time_till(message, user_id, habit_name, habit_description, habit_frequency, reminder_time_from):
+    reminder_time_till = message.text
+    try:
+        datetime.strptime(reminder_time_till, "%H:%M")
+    except ValueError:
+        msg = bot.reply_to(message, "Время окончания оповещения должно быть в формате ЧЧ:ММ. Пожалуйста, попробуйте снова:")
+        bot.register_next_step_handler(msg, get_reminder_time_till, user_id, habit_name, habit_description, habit_frequency, reminder_time_from)
+        return
+
+    # Добавляем привычку в базу данных
+    print(f"{user_id}, {habit_name}, {habit_description}, {habit_frequency}, {reminder_time_from}, {reminder_time_till}")
+    db.add_habit(user_id, habit_name, habit_description, habit_frequency, reminder_time_from, reminder_time_till)
+    bot.reply_to(message, f"Привычка '{habit_name}' добавлена успешно!")
+    db.close_connection()
 
 
 @bot.message_handler(commands=['change'])
