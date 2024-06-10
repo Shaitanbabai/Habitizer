@@ -11,11 +11,12 @@ def create_connection(db_file):
     """Создание подключения к SQLite базе данных."""
     conn = None
     try:
-        conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(db_file, check_same_thread=False)
         print(f"Соединение с базой данных {db_file} установлено.")
     except Error as e:
         print(f"Ошибка соединения с базой данных: {e}")
     return conn
+
 
 
 class HabitTrackerDatabase:
@@ -138,6 +139,15 @@ class HabitTrackerDatabase:
             VALUES (?, ?, ?)
             """
             self.execute_query(query_insert, (user_tg_id, user_name, dt.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+    def get_user_name_by_user_tg_id(self, user_tg_id):
+        """Получение id привычки."""
+        query = """
+        SELECT user_name FROM users WHERE user_tg_id=?
+        """
+        result = self.execute_query(query, (user_tg_id,), fetch=True)
+        user_name = result[0][0]
+        return user_name
 
     def add_habit(self, user_id, habit_name, habit_description, habit_frequency, reminder_time_from,
                   reminder_time_till):

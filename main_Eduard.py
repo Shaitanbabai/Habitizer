@@ -1,4 +1,6 @@
 import telebot
+from telebot import types
+from database import HabitTrackerDatabase
 # import requests
 # from openai import OpenAI
 # from config import api_key1
@@ -15,6 +17,7 @@ from config import Config
 
 bot = telebot.TeleBot(Config.TELEGRAM_API_TOKEN)
 message_count = 0
+db = HabitTrackerDatabase('habit_tracker.db')
 
 
 # def chat_with_ai(initial_message):
@@ -35,11 +38,31 @@ message_count = 0
 # Обработчик команды start
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(
-        message,
-        "Привет! Я бот -трекер привычек (вер 1.0). Мне можно задать свои привычки , задать им напоминания , я буду тебе "
-        "помогать.\nНапиши /help для просмотра команд"
-    )
+    user_tg_id = message.from_user.id
+    # print(user_tg_id)
+
+    # Проверяем, есть ли пользователь в базе данных
+    query_check = "SELECT COUNT(*) FROM users WHERE user_tg_id = ?"
+    result = db.execute_query(query_check, (user_tg_id,), fetch=True)
+    # print(result)
+
+    if result and result[0][0] > 0:
+        user_name = db.get_user_name_by_user_tg_id(user_tg_id)
+        bot.reply_to(
+            message,
+            f"Привет, {user_name}! Я бот-трекер привычек (вер 1.0). Мне можно задать свои привычки , задать им напоминания, я буду тебе помогать.\nНапиши /help для просмотра команд"
+        )
+    else:
+        # Запрашиваем у пользователя его имя
+        msg = bot.reply_to(message, "Привет, Гость!  Для продолжения, предлагаю познакомиться. Я бот-трекер привычек (вер 1.0). Пожалуйста, напишите ваше имя:")
+        bot.register_next_step_handler(msg, get_user_name, user_tg_id)
+
+
+def get_user_name(message, user_tg_id):
+    user_name = message.text
+    # Добавляем пользователя в базу данных
+    db.add_user(user_tg_id, user_name)
+    bot.reply_to(message, f"Спасибо, {user_name}! Вы зарегистрированы.\nТеперь вы можете задавать свои привычки и напоминания.")
 
 
 # Обработчик команды help
