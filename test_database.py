@@ -1,3 +1,4 @@
+from datetime import datetime
 
 from database import HabitTrackerDatabase
 
@@ -36,13 +37,18 @@ if __name__ == "__main__":
     #              "06:00", "18:00")
     #
     # # Эмуляция текущего времени, вводимого пользователем
-    # current_time_input = "20:30"
-    # current_time = datetime.strptime(current_time_input, "%H:%M")
+    # current_time_input = ["06:00", "07:00", "07:30", "08:00", "09:00", "09:45", "11:00", "11:30", "12:00", "13:00",
+    #                       "13:15", "15:00", "16:45", "17:00", "18:00", "18:30", "20:00", "20:15"]
     #
-    # # ID пользователя для тестирования
-    # user_id = 1
-    # db.send_reminders_based_on_time(user_id, current_time)
+    # # Перебор значений времени из списка
+    # for time_input in current_time_input:
+    #     current_time = datetime.strptime(time_input, "%H:%M")
     #
+    #     # ID пользователя для тестирования
+    #     for i in range(1, 4):
+    #         user_id = i
+    #         db.send_reminders_based_on_time(user_id, current_time)
+
     # user_id = 2
     # db.send_reminders_based_on_time(user_id, current_time)
     #
@@ -52,10 +58,10 @@ if __name__ == "__main__":
     # user_id = 4
     # db.send_reminders_based_on_time(user_id, current_time)
 
-    reminder_id = 26
-    user_id = 3
-    habit_id = 9
-    response_time = "2024-06-07 15:02:00"
-    db.add_user_response(user_id, habit_id, reminder_id, response_time)
+    # reminder_id = 26
+    # user_id = 3
+    # habit_id = 9
+    # response_time = "2024-06-10 15:15:00"
+    # db.add_user_response(user_id, habit_id, reminder_id, response_time)
 
     db.close_connection()

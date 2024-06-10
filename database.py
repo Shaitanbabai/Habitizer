@@ -373,27 +373,6 @@ class HabitTrackerDatabase:
     #     """
     #     self.execute_query(query, (reminder_time_from, reminder_time_till, habit_id))
 
-    # def mark_habit_rejection(self, habit_id):
-    #     """Отметка временного отказа от привычки - на перспективу"""
-    #     query = """
-    #     UPDATE habits SET habit_status=? AND habit_end_date=? WHERE habit_id=?
-    #     """
-    #     self.execute_query(query, (1, dt.now().strftime("%Y-%m-%d %H:%M:%S"), habit_id))
-
-    # def mark_reminder_completed(self, reminder_id):
-    #     """Отметка о выполнении привычки."""
-    #     query = """
-    #     UPDATE reminders SET reminders.reminder_status=? WHERE reminder_id=?
-    #     """
-    #     self.execute_query(query, (1, reminder_id))
-
-    # def mark_reminder_missed(self, reminder_id):
-    #     """Отметка о пропуске выполнения привычки."""
-    #     query = """
-    #     UPDATE reminders SET reminders.reminder_status=? WHERE reminder_id=?
-    #     """
-    #     self.execute_query(query, (0, reminder_id))
-
     # def delete_habit(self, habit_id):
     #     """Удаление привычки и напоминаний."""
     #     query = """
