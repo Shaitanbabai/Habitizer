@@ -10,7 +10,7 @@
 
 
 import sqlite3
-from matplotlib import pyplot as plt
+from matplotlib import pyplot
 import datetime
 
 # Данные для проверки построения
