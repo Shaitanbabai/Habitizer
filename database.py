@@ -212,6 +212,17 @@ class HabitTrackerDatabase:
         habit_id = result[0][0]
         return habit_id
 
+    def get_due_reminders(self, current_time):
+        """Получение напоминаний, которые должны быть отправлены в текущее время."""
+        query = """
+        SELECT u.user_tg_id, h.habit_name, h.habit_description, r.reminder_id, h.habit_id
+        FROM reminders r
+        JOIN habits h ON r.habit_id = h.habit_id
+        JOIN users u ON h.user_id = u.user_id
+        WHERE r.reminder_date = ? AND r.reminder_status = 0
+        """
+        return self.execute_query(query, (current_time,), fetch=True)
+
     def send_reminder_and_log_statistics(self, user_id, habit_id, reminder_id):
         """Отправка напоминания пользователю и запись события в таблицу statistics, обновление reminder_status."""
         habit_query = """
@@ -225,24 +236,14 @@ class HabitTrackerDatabase:
 
         habit_name, habit_description = habit_result[0]
 
-        reminder_query = """
-        SELECT reminder_date FROM reminders WHERE reminder_id = ?
-        """
-        reminder_result = self.execute_query(reminder_query, (reminder_id,), fetch=True)
-
-        if not reminder_result:
-            print("Напоминание не найдено.")
-            return
-
-        reminder_date = reminder_result[0][0]
-        reminder_sending_date = dt.now().strftime("%Y-%m-%d %H:%M:%S")
+        reminder_sending_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         print(
-            f"Напоминание отправлено пользователю {user_id} для привычки '{habit_name}' ({habit_description}) на {reminder_date} в {reminder_sending_date}")
+            f"Напоминание отправлено пользователю {user_id} для привычки '{habit_name}' ({habit_description}) в {reminder_sending_date}")
 
         # Обновление поля reminder_status в таблице reminders
         update_reminder_query = """
-        UPDATE reminders SET reminder_status = 0 WHERE reminder_id = ?
+        UPDATE reminders SET reminder_status = 1 WHERE reminder_id = ?
         """
         self.execute_query(update_reminder_query, (reminder_id,))
 

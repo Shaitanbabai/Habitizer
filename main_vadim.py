@@ -99,7 +99,7 @@ def create_habit(message):
 
 @bot.message_handler(commands=['change'])
 def change_habit(message):
-    bot.reply_to(message, f"Функционал в разработке. Приятно познакомиться, {message.from_user.first_name}!")
+    bot.reply_to(message, f"Функционал в разработке. Приятно познакомиться, {message.from_user.first_name}! ")
 
 
 @bot.message_handler(commands=['delete'])

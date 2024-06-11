@@ -1,5 +1,6 @@
 from datetime import datetime
-
+import threading
+import time
 import telebot
 from telebot import types
 from database import HabitTrackerDatabase
@@ -46,7 +47,7 @@ def send_welcome(message):
     # Проверяем, есть ли пользователь в базе данных
     query_check = "SELECT COUNT(*) FROM users WHERE user_tg_id = ?"
     result = db.execute_query(query_check, (user_tg_id,), fetch=True)
-    db.close_connection()
+    # db.close_connection()
     # print(result)
 
     if result and result[0][0] > 0:
@@ -59,6 +60,9 @@ def send_welcome(message):
         # Запрашиваем у пользователя его имя
         msg = bot.reply_to(message, "Привет, Гость!  Для продолжения, предлагаю познакомиться. Я бот-трекер привычек (вер 1.0). Пожалуйста, напишите ваше имя:")
         bot.register_next_step_handler(msg, get_user_name, user_tg_id)
+
+    reminder_thread = threading.Thread(target=check_and_send_reminders, args=(message.chat.id,))
+    reminder_thread.start()
 
 
 def get_user_name(message, user_tg_id):
@@ -134,7 +138,7 @@ def get_reminder_time_till(message, user_id, habit_name, habit_description, habi
         return
 
     # Добавляем привычку в базу данных
-    print(f"{user_id}, {habit_name}, {habit_description}, {habit_frequency}, {reminder_time_from}, {reminder_time_till}")
+    # print(f"{user_id}, {habit_name}, {habit_description}, {habit_frequency}, {reminder_time_from}, {reminder_time_till}")
     db.add_habit(user_id, habit_name, habit_description, habit_frequency, reminder_time_from, reminder_time_till)
     bot.reply_to(message, f"Привычка '{habit_name}' добавлена успешно!")
     db.close_connection()
@@ -168,6 +172,18 @@ def handle_all_messages(message):
     pass
     # reply = chat_with_ai(message.text)  # Получение ответа от AI
     # bot.reply_to(message, reply)  # Отправка ответа пользователю
+
+
+def check_and_send_reminders(chat_id):
+    while True:
+        current_time = datetime.now().strftime("%H:%M")
+        reminders = db.get_due_reminders(current_time)
+        print(current_time, reminders)
+        for reminder in reminders:
+            user_id, habit_name, habit_description, reminder_id, habit_id = reminder
+            bot.send_message(user_id, f"Текущее время {current_time}. Направляю напоминание, что Вам необходимо выполнить следующее: Название привычки: {habit_name}, Описание привычки: {habit_description}")
+            db.send_reminder_and_log_statistics(user_id, habit_id, reminder_id)
+        time.sleep(60)
 
 
 if __name__ == "__main__":
