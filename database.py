@@ -219,7 +219,7 @@ class HabitTrackerDatabase:
         FROM reminders r
         JOIN habits h ON r.habit_id = h.habit_id
         JOIN users u ON h.user_id = u.user_id
-        WHERE r.reminder_date = ? AND r.reminder_status = 0
+        WHERE r.reminder_date = ? /* AND r.reminder_status = 0 */
         """
         return self.execute_query(query, (current_time,), fetch=True)
 
@@ -258,35 +258,35 @@ class HabitTrackerDatabase:
             user_id, habit_id, reminder_id, 0, 2, 'Активное', reminder_sending_date
         ))
 
-    def get_user_habits(self, user_id):
-        """Получение всех привычек пользователя."""
-        query = """
-        SELECT habit_id, habit_name FROM habits WHERE user_id = ?
-        """
-        return self.execute_query(query, (user_id,), fetch=True)
+    # def get_user_habits(self, user_id):
+    #     """Получение всех привычек пользователя."""
+    #     query = """
+    #     SELECT habit_id, habit_name FROM habits WHERE user_id = ?
+    #     """
+    #     return self.execute_query(query, (user_id,), fetch=True)
+    #
+    # def get_habit_reminders(self, habit_id):
+    #     """Получение всех напоминаний для привычки."""
+    #     query = """
+    #     SELECT reminder_id, reminder_date FROM reminders WHERE habit_id = ?
+    #     """
+    #     return self.execute_query(query, (habit_id,), fetch=True)
 
-    def get_habit_reminders(self, habit_id):
-        """Получение всех напоминаний для привычки."""
-        query = """
-        SELECT reminder_id, reminder_date FROM reminders WHERE habit_id = ?
-        """
-        return self.execute_query(query, (habit_id,), fetch=True)
-
-    def send_reminders_based_on_time(self, user_id, current_time):
-        """Отправка напоминаний пользователю на основе текущего времени."""
-        habits = self.get_user_habits(user_id)
-        if not habits:
-            print("Нет привычек для данного пользователя.")
-            return
-
-        for habit in habits:
-            habit_id, habit_name = habit
-            reminders = self.get_habit_reminders(habit_id)
-            for reminder in reminders:
-                reminder_id, reminder_date = reminder
-                reminder_time = datetime.strptime(reminder_date, "%H:%M").time()
-                if reminder_time == current_time.time():
-                    self.send_reminder_and_log_statistics(user_id, habit_id, reminder_id)
+    # def send_reminders_based_on_time(self, user_id, current_time):
+    #     """Отправка напоминаний пользователю на основе текущего времени."""
+    #     habits = self.get_user_habits(user_id)
+    #     if not habits:
+    #         print("Нет привычек для данного пользователя.")
+    #         return
+    #
+    #     for habit in habits:
+    #         habit_id, habit_name = habit
+    #         reminders = self.get_habit_reminders(habit_id)
+    #         for reminder in reminders:
+    #             reminder_id, reminder_date = reminder
+    #             reminder_time = datetime.strptime(reminder_date, "%H:%M").time()
+    #             if reminder_time == current_time.time():
+    #                 self.send_reminder_and_log_statistics(user_id, habit_id, reminder_id)
 
     def add_user_response(self, user_id, habit_id, reminder_id, response_time):
         """Запись отклика пользователя на напоминание и обновление статусов."""
@@ -420,4 +420,3 @@ class HabitTrackerDatabase:
     #     except Error as e:
     #         print(f"Ошибка выполнения запроса: {e}")
     #         return None
-    #

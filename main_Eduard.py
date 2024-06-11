@@ -159,19 +159,19 @@ def statistics(message):
     bot.reply_to(message, f"Функционал в разработке. Приятно познакомиться, {message.from_user.first_name}!")
 
 
-# Обработчик текстовых сообщений
-@bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    pass
+# # Обработчик текстовых сообщений
+# @bot.message_handler(func=lambda message: True)
+# def handle_message(message):
+#     pass
 
 
 # Обработчик поиска
 
 
-def handle_all_messages(message):
-    pass
-    # reply = chat_with_ai(message.text)  # Получение ответа от AI
-    # bot.reply_to(message, reply)  # Отправка ответа пользователю
+# def handle_all_messages(message):
+#     pass
+#     # reply = chat_with_ai(message.text)  # Получение ответа от AI
+#     # bot.reply_to(message, reply)  # Отправка ответа пользователю
 
 
 def check_and_send_reminders(chat_id):
@@ -180,9 +180,10 @@ def check_and_send_reminders(chat_id):
         reminders = db.get_due_reminders(current_time)
         print(current_time, reminders)
         for reminder in reminders:
-            user_id, habit_name, habit_description, reminder_id, habit_id = reminder
-            bot.send_message(user_id, f"Текущее время {current_time}. Направляю напоминание, что Вам необходимо выполнить следующее: Название привычки: {habit_name}, Описание привычки: {habit_description}")
-            db.send_reminder_and_log_statistics(user_id, habit_id, reminder_id)
+            user_tg_id, habit_name, habit_description, reminder_id, habit_id = reminder
+            bot.send_message(user_tg_id, f"Текущее время {current_time}. Направляю напоминание, что Вам необходимо выполнить следующее: Название привычки: {habit_name}, Описание привычки: {habit_description}")
+            users_user_id = db.get_user_id_by_user_tg_id(user_tg_id)  # Получение id пользователя из таблицы users по user_tg_id
+            db.send_reminder_and_log_statistics(users_user_id, habit_id, reminder_id)  # Запись лога отправки напоминания в таблицу statistics
         time.sleep(60)
 
 
