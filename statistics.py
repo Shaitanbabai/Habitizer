@@ -12,7 +12,11 @@
 import sqlite3
 from matplotlib import pyplot as plt
 import datetime
-import database
+from database import HabitTrackerDatabase
+from config import Config
+
+db = HabitTrackerDatabase('habit_tracker.db')
+
 
 # Данные для проверки построения
 # completed_habit = 10 # выполнено всего
@@ -44,7 +48,7 @@ try:
     FROM statistics
     WHERE user_name = ? AND habit_name = ?
     """
-    cursor.execute(query_completed, (user_name, habit_name))
+    db.execute_query(query_completed, (user_name, habit_name))
     completed_habit_result = cursor.fetchone()
 
     if completed_habit_result is None:

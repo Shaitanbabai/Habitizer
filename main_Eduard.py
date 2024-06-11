@@ -4,15 +4,6 @@ import time
 import telebot
 from telebot import types
 from database import HabitTrackerDatabase
-# import requests
-# from openai import OpenAI
-# from config import api_key1
-# # Настройка клиента API OpenAI (убедитесь, что используете корректный метод для вашего случая)
-# client = OpenAI(
-#     api_key=api_key1,
-#     base_url=
-#     "https://api.proxyapi.ru/openai/v1",  # Проверьте этот URL, возможно, нужно использовать официальный URL OpenAI.
-# )
 
 
 # Инициализация бота
@@ -141,7 +132,7 @@ def get_reminder_time_till(message, user_id, habit_name, habit_description, habi
     # print(f"{user_id}, {habit_name}, {habit_description}, {habit_frequency}, {reminder_time_from}, {reminder_time_till}")
     db.add_habit(user_id, habit_name, habit_description, habit_frequency, reminder_time_from, reminder_time_till)
     bot.reply_to(message, f"Привычка '{habit_name}' добавлена успешно!")
-    db.close_connection()
+    # db.close_connection()
 
 
 @bot.message_handler(commands=['change'])
@@ -181,10 +172,35 @@ def check_and_send_reminders(chat_id):
         print(current_time, reminders)
         for reminder in reminders:
             user_tg_id, habit_name, habit_description, reminder_id, habit_id = reminder
-            bot.send_message(user_tg_id, f"Текущее время {current_time}. Направляю напоминание, что Вам необходимо выполнить следующее: Название привычки: {habit_name}, Описание привычки: {habit_description}")
-            users_user_id = db.get_user_id_by_user_tg_id(user_tg_id)  # Получение id пользователя из таблицы users по user_tg_id
-            db.send_reminder_and_log_statistics(users_user_id, habit_id, reminder_id)  # Запись лога отправки напоминания в таблицу statistics
+
+            # Создаем инлайн-кнопку
+            markup = types.InlineKeyboardMarkup()
+            button = types.InlineKeyboardButton(text="Отметить выполнение", callback_data=f"complete_{habit_id}")
+            markup.add(button)
+
+            bot.send_message(
+                user_tg_id,
+                f"Текущее время {current_time}. Направляю напоминание, что Вам необходимо выполнить следующее: Название привычки: {habit_name}, Описание привычки: {habit_description}",
+                reply_markup=markup
+            )
+
+            user_id = db.get_user_id_by_user_tg_id(user_tg_id)  # Получение id пользователя из таблицы users по user_tg_id
+            db.send_reminder_and_log_statistics(user_id, habit_id,
+                                                reminder_id)  # Запись лога отправки напоминания в таблицу statistics
         time.sleep(60)
+
+
+# Обработчик нажатий на инлайн-кнопки
+@bot.callback_query_handler(func=lambda call: call.data.startswith("complete_"))
+def handle_complete_habit(call):
+    habit_id = call.data.split("_")[1]
+    user_tg_id = call.from_user.id
+
+    # Логика для отметки выполнения привычки
+    # db.mark_habit_completed(user_tg_id, habit_id)
+
+    bot.answer_callback_query(call.id, "Привычка отмечена как выполненная!")
+    bot.send_message(user_tg_id, "Отличная работа! Вы отметили выполнение привычки.")
 
 
 if __name__ == "__main__":
