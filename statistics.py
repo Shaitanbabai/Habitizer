@@ -9,7 +9,7 @@
 # Все графики выводятся последовательно
 import datetime
 import sqlite3
-import matplotlib    # pip install matplotlib
+from matplotlib.pyplot import bar, show, title, pie
 
 # Данные для проверки построения
 # completed_habit = 10 # выполнено всего
@@ -76,7 +76,6 @@ try:
         raise ValueError("Запись не найдена для данной комбинации пользователя и привычки.")
     habit_status = habit_status_result[0]
 
-> Юрий:
 # Получение выполненных напоминаний за выбранный период
     query_missed = """
        SELECT COUNT(reminder_status)
@@ -97,7 +96,7 @@ except sqlite3.Error as error:
 except ValueError as ve:
     print("Ошибка:", ve)
 else:
-    #Расчет процентов
+    # Расчет процентов
    try:
         total_habits = completed_habit + missed_habit
         if total_habits == 0:
@@ -106,7 +105,7 @@ else:
         if habit_status == 0:
             raise ZeroDivisionError("Количество отправленных напоминаний равно нулю.")
 
-        #Расчет процентов для всего периода
+        # Расчет процентов для всего периода
         percent_completed_total = completed_habit * 100 / total_habits
         percent_missed_total = 100 - percent_completed_total
 
@@ -117,27 +116,27 @@ else:
         # Построение диаграммы для всего периода
         vals = [percent_completed_total, percent_missed_total]
         labels = ['% выполнения', '% невыполнения']
-        plt.title(f"Выполнение привычки {habit_name} за весь период", fontsize=12, color='r')
-        plt.pie(vals, labels=labels, autopct='%.2f')
-        plt.show()
+        title(f"Выполнение привычки {habit_name} за весь период", fontsize=12, color='r')
+        pie(vals, labels=labels, autopct='%.2f')
+        show()
 
         # Построение диаграммы за период
         vals = [percent_reminder_status, percent_reminder_non]
         labels = ['% выполнения', '% невыполнения']
-        plt.title(f"Выполнение привычки {habit_name} с {custom_date_start_str} по {custom_date_end_str}", fontsize=12,
-                  color='r')
-        plt.pie(vals, labels=labels, autopct='%.2f')
-        plt.show()
+        title(f"Выполнение привычки {habit_name} с {custom_date_start_str} по {custom_date_end_str}", fontsize=12,
+              color='r')
+        pie(vals, labels=labels, autopct='%.2f')
+        show()
 
         # Построение гистограммы
-        plt.title(f"Сравнение выполнения привычек", fontsize=12, color='r')
+        title(f"Сравнение выполнения привычек", fontsize=12, color='r')
         x = ['весь период', 'заданный период']
         y = [percent_missed_total, percent_reminder_status]
-        plt.bar(x, y, width=0.5, linewidth=2, edgecolor='m')
-        plt.show()
+        bar(x, y, width=0.5, linewidth=2, edgecolor='m')
+        show()
 
    except ZeroDivisionError as zde:
         print("Ошибка при расчете процентов:", zde)
-finally:
+   finally:
     if sqlite_connection:
         sqlite_connection.close()

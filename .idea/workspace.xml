@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e68f3714-1aa2-47eb-9c4a-cf5a66df02d6" name="Changes" comment="update config.py">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/statistics.py" beforeDir="false" afterPath="$PROJECT_DIR$/statistics.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -43,7 +42,7 @@
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/config.py" root0="SKIP_INSPECTION" />
     <setting file="file://$PROJECT_DIR$/main.py" root0="SKIP_INSPECTION" />
-    <setting file="file://$PROJECT_DIR$/statistics.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/statistics.py" root0="SKIP_INSPECTION" />
     <setting file="file://$PROJECT_DIR$/users2.py" root0="SKIP_INSPECTION" />
     <setting file="file://$PROJECT_DIR$/users3.py" root0="SKIP_INSPECTION" />
   </component>
